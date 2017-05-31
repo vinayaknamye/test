@@ -1,6 +1,6 @@
 # Nikunj Flipkart
 
-## Prerequiste
+## Prerequisite
 NodeJs version 6 and above
 
 ## Running the code
