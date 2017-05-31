@@ -2,7 +2,6 @@ let XLSX = require('xlsx');
 let extract = require('pdf-text-extract');
 let fs = require('fs');
 let jinqJs = require('jinq');
-let mkdirp = require("mkdirp");
 let json2csv = require("json2csv");
 let pdf_path = "./input pdfs/";
 let order_ids_in_pdfs = [];
@@ -66,65 +65,74 @@ fs.readdirSync(pdf_path).forEach(file => {
 });
 Promise.all(tasks)
 	.then((suc) => {
-		mkdirp('./output', function (err) {
-		    if (err) {
-		    	console.error(err)
-		    } else {
-				//console.log("All order ids in pdf: " + JSON.stringify(order_ids_in_pdfs));
 
-				fs.readdirSync(excel_path).forEach(file => {
-					if(/\.xlsx$/i.test(file) || /\.xlx$/i.test(file)) {
-						let workbook = XLSX.readFile(excel_path + file);
-						let first_sheet_name = workbook.SheetNames[0];
-						let sheet_data = XLSX.utils.sheet_to_json(workbook.Sheets[first_sheet_name]);
-						Array.prototype.push.apply(excel_data, sheet_data);
-					}
-				});
-
-				let list_of_order_ids_in_pdf_not_in_excel = new jinqJs()
-										                .from(order_ids_in_pdfs)
-										                .not()
-                  										.in(excel_data.map((d) => {
-                  											return d[order_id_column_in_excel];
-                  										}))
-										                .select();
-
-                let list_of_orders_in_pdf_and_excel = new jinqJs()
-										                .from(excel_data)
-										                .in(order_ids_in_pdfs, order_id_column_in_excel)
-										                .select(columns);
-
-                let result;
-                if(order_ids_in_pdfs.length) {
-                	result = json2csv({
-                		data: order_ids_in_pdfs.map((o) => {
-                			return { "Order Id" : o};
-                		})
-                	});
-					fs.writeFileSync("Order Ids in Pdfs.csv", result);
-                } else {
-                	console.log("No order ids in pdfs");
-                }
-                if(list_of_order_ids_in_pdf_not_in_excel.length) {
-                	result = json2csv({
-                		data: list_of_order_ids_in_pdf_not_in_excel.map((o) => {
-                			return { "Order Id" : o};
-                		})
-                	});
-                	fs.writeFileSync("Order Ids present in Pdfs but not in excel.csv", result);
-                }  else {
-                	console.log("No Order Ids present in Pdfs but not present in excel");
-                }
-                if(list_of_orders_in_pdf_and_excel.length) {
-                	result = json2csv({
-                		data: list_of_orders_in_pdf_and_excel
-                	});
-                	fs.writeFileSync("Order Ids present both in Pdfs and excel.csv", result);
-                } else {
-                	console.log("No Order Ids present both in Pdfs and excel");
-                }
-		    }
+		fs.readdirSync(excel_path).forEach(file => {
+			if(/\.xlsx$/i.test(file) || /\.xlx$/i.test(file)) {
+				let workbook = XLSX.readFile(excel_path + file);
+				let first_sheet_name = workbook.SheetNames[0];
+				let sheet_data = XLSX.utils.sheet_to_json(workbook.Sheets[first_sheet_name]);
+				Array.prototype.push.apply(excel_data, sheet_data);
+			}
 		});
+
+		let list_of_order_ids_in_pdf_not_in_excel = new jinqJs()
+								                .from(order_ids_in_pdfs)
+								                .not()
+          										.in(excel_data.map((d) => {
+          											return d[order_id_column_in_excel];
+          										}))
+								                .select();
+
+        let list_of_orders_in_pdf_and_excel = new jinqJs()
+								                .from(excel_data)
+								                .in(order_ids_in_pdfs, order_id_column_in_excel)
+								                .select(columns);
+
+        let result;
+        if(order_ids_in_pdfs.length) {
+        	result = json2csv({
+        		data: order_ids_in_pdfs.map((o) => {
+        			return { "Order Id" : o};
+        		})
+        	});
+        	try {
+	        	fs.unlinkSync("Order Ids in Pdfs.csv");
+	        } catch(e) {
+
+	        }
+
+			fs.writeFileSync("Order Ids in Pdfs.csv", result);
+        } else {
+        	console.log("No order ids in pdfs");
+        }
+        if(list_of_order_ids_in_pdf_not_in_excel.length) {
+        	result = json2csv({
+        		data: list_of_order_ids_in_pdf_not_in_excel.map((o) => {
+        			return { "Order Id" : o};
+        		})
+        	});
+			try {
+	        	fs.unlinkSync("Order Ids present in Pdfs but not in excel.csv");
+	        } catch(e) {
+
+	        }
+        	fs.writeFileSync("Order Ids present in Pdfs but not in excel.csv", result);
+        }  else {
+        	console.log("No Order Ids present in Pdfs but not present in excel");
+        }
+        if(list_of_orders_in_pdf_and_excel.length) {
+        	result = json2csv({
+        		data: list_of_orders_in_pdf_and_excel
+        	});
+        	try {
+	        	fs.unlinkSync("Order Ids present both in Pdfs and excel.csv");
+	        } catch(e) {
+
+	        }
+        	fs.writeFileSync("Order Ids present both in Pdfs and excel.csv", result);
+        } else {
+        	console.log("No Order Ids present both in Pdfs and excel");
+        }
 	})
 	.catch((err) => {
 		console.log(err);
